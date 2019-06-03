@@ -1,1 +1,113 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'This ia a basic stack'
+
+Parameters:
+  ClusterName: 
+    Type: String
+    Default: 'Vikas-ecs-cluster'
+
+  KeyName:
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: 'Vikas'
+  
+  AmiId:
+    Type: String
+    Description: 'Specify the AMI for EC2 Instance'
+    Default: 'ami-00cf4737e238866a3'
+
+  InstanceType:
+    Description: 'This will specify the size of the EC2 Instance'
+    Type: String
+    Default: t2.micro
+    AllowedValues: [t2.micro,t2.small,t2.medium]
+
+  MaxSize:
+    Type: Number
+    Default: '3'
+    Description: ' Specify the Maximum number of EC2 Instances in the Auto Scaling Group'
+
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+    Description: 'This specify the VPC in which EC2 will be launched'
+    Default: 'vpc-73cc6a09'
+
+  SubnetId:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: 'This specify the Subnet in which EC2 will be launched'
+    Default: 'subnet-1a793515'
+
+Resources:
+  MicroserviceCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Ref ClusterName
+
+  AutoScaling:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: As_for_ecs-vikas
+      LaunchConfigurationName: !Ref LaunchConfig
+      VPCZoneIdentifier: !Ref SubnetId
+      MinSize: "0"
+      MaxSize: !Ref MaxSize
+      DesiredCapacity: "0"
+      
+
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      LaunchConfigurationName: Vikas-Lc
+      KeyName: !Ref KeyName
+      ImageId: !Ref AmiId
+      InstanceType: !Ref InstanceType
+      UserData:
+        Fn::Base64:
+          #!/bin/bash
+          echo ECS_CLUSTER=vikas-test >> /etc/ecs/ecs.config; 
+          echo ECS_BACKEND_HOST= >> /etc/ecs/ecs.config;
+      SecurityGroups: 
+        - !Ref SecurityGroups
+  
+  SecurityGroups:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: 'This Security Group is used to secure the cloud Instances'
+      GroupName: SG-ECS
+      
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0 
+
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      VpcId: !Ref VpcId 
+
+Outputs:
+  VpcId:
+   Description: VPC
+   Value: !Ref VpcId
+   Export:
+     Name: 'VpcId'
+  
+  SubnetId:
+    Description: 'Subnet'
+    Value: !Ref SubnetId
+    Export:
+      Name: 'SubnetId'
+
+  SecurityGroups:
+    Description: 'SecurityGroups'
+    Value: !Ref SecurityGroups
+    Export:
+      Name: 'SecurityGroups'
+
+  MicroserviceCluster:
+    Description: 'Cluster'
+    Value: !Ref MicroserviceCluster
+    Export:
+      Name: 'MicroserviceCluster'
 
